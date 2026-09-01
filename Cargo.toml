@@ -1,0 +1,15 @@
+[package]
+name = "wraplint"
+version = "0.1.0"
+edition = "2021"
+authors = ["matthewh691"]
+license = "MIT"
+description = "A linter for hard-wrapped plain text: flags overlong lines, ragged wraps, and stray whitespace."
+
+[[bin]]
+name = "wraplint"
+path = "src/main.rs"
+
+[lib]
+name = "wraplint"
+path = "src/lib.rs"
