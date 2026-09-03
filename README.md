@@ -46,6 +46,15 @@ CHANGELOG.txt:2: ragged-wrap: line wraps at 43 characters though the next word (
 The exit code is 0 when a file is clean and 1 when there's at least
 one finding, so it can be dropped into a pre-commit hook or CI step.
 
+Pass `-` in place of a filename to read from stdin instead, which is
+what you want in a `commit-msg` hook:
+
+```
+./target/release/wraplint --width 72 - < "$1"
+```
+
+Findings from stdin are reported under the path `-`.
+
 ## Rules
 
 - `line-too-long` — a line is wider than the configured limit. A line

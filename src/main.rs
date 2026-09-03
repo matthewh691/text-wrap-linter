@@ -1,5 +1,6 @@
 use std::env;
 use std::fs;
+use std::io::{self, Read};
 use std::process::ExitCode;
 
 use wraplint::linter::{lint, Options};
@@ -40,12 +41,24 @@ fn main() -> ExitCode {
     let mut found_any = false;
 
     for path in &paths {
-        let text = match fs::read_to_string(path) {
-            Ok(t) => t,
-            Err(e) => {
-                eprintln!("{}: {}", path, e);
-                found_any = true;
-                continue;
+        let text = if path == "-" {
+            let mut buf = String::new();
+            match io::stdin().read_to_string(&mut buf) {
+                Ok(_) => buf,
+                Err(e) => {
+                    eprintln!("<stdin>: {}", e);
+                    found_any = true;
+                    continue;
+                }
+            }
+        } else {
+            match fs::read_to_string(path) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("{}: {}", path, e);
+                    found_any = true;
+                    continue;
+                }
             }
         };
         for finding in lint(&text, &opts) {
@@ -63,4 +76,5 @@ fn main() -> ExitCode {
 
 fn print_usage() {
     eprintln!("usage: wraplint [--width N] FILE...");
+    eprintln!("       wraplint [--width N] -   (read from stdin)");
 }
