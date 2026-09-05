@@ -68,12 +68,16 @@ Findings from stdin are reported under the path `-`.
 - `hard-tab` — a line contains a tab character, whose rendered width
   isn't fixed.
 
+Lines inside a fenced code block (delimited by ``` ``` ``` or `~~~`)
+are exempt from every rule. Code isn't wrapped by hand and its width
+is whatever the code needs it to be.
+
 ## Known limitations
 
 Line width is measured in `char`s, not display columns, so wide or
-combining Unicode characters will throw the count off. Markdown code
-fences and blockquote prefixes aren't recognized yet, so a fenced code
-block or a `> ` quoted paragraph is linted as if it were prose.
+combining Unicode characters will throw the count off. Blockquote
+prefixes (`> `) aren't recognized yet, so a quoted paragraph is linted
+as if it were prose.
 
 ## Development
 

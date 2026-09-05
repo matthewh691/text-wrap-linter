@@ -49,19 +49,57 @@ impl Default for Options {
 
 pub fn lint(text: &str, opts: &Options) -> Vec<Finding> {
     let lines: Vec<&str> = text.lines().collect();
+    let fenced = fenced_lines(&lines);
     let mut findings = Vec::new();
 
     for (i, line) in lines.iter().enumerate() {
+        if fenced[i] {
+            continue;
+        }
         let n = i + 1;
         check_trailing_whitespace(line, n, &mut findings);
         check_hard_tab(line, n, &mut findings);
         check_line_too_long(line, n, opts.max_width, &mut findings);
     }
 
-    check_ragged_wraps(&lines, opts.max_width, &mut findings);
+    check_ragged_wraps(&lines, &fenced, opts.max_width, &mut findings);
 
     findings.sort_by_key(|f| f.line);
     findings
+}
+
+/// Mark every line that is a markdown code fence delimiter (``` or ~~~)
+/// or falls inside one, so those lines are exempt from every rule. Code
+/// is not prose; it isn't wrapped by hand and its width is whatever the
+/// code needs it to be.
+fn fenced_lines(lines: &[&str]) -> Vec<bool> {
+    let mut fenced = vec![false; lines.len()];
+    let mut open: Option<char> = None;
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim_start();
+        let marker = if trimmed.starts_with("```") {
+            Some('`')
+        } else if trimmed.starts_with("~~~") {
+            Some('~')
+        } else {
+            None
+        };
+        match open {
+            Some(ch) => {
+                fenced[i] = true;
+                if marker == Some(ch) {
+                    open = None;
+                }
+            }
+            None => {
+                if let Some(ch) = marker {
+                    fenced[i] = true;
+                    open = Some(ch);
+                }
+            }
+        }
+    }
+    fenced
 }
 
 fn check_trailing_whitespace(line: &str, n: usize, out: &mut Vec<Finding>) {
@@ -111,17 +149,17 @@ fn check_line_too_long(line: &str, n: usize, max_width: usize, out: &mut Vec<Fin
 /// one. That pattern usually means the paragraph was edited after it
 /// was wrapped and never re-flowed. The last line of a paragraph is
 /// exempt: it is supposed to be short.
-fn check_ragged_wraps(lines: &[&str], max_width: usize, out: &mut Vec<Finding>) {
+fn check_ragged_wraps(lines: &[&str], fenced: &[bool], max_width: usize, out: &mut Vec<Finding>) {
     let mut i = 0;
     while i < lines.len() {
-        if lines[i].trim().is_empty() {
+        if lines[i].trim().is_empty() || fenced[i] {
             i += 1;
             continue;
         }
-        // Collect the run of non-blank lines that make up one paragraph.
+        // Collect the run of non-blank, non-fenced lines that make up one paragraph.
         let start = i;
         let mut end = i;
-        while end + 1 < lines.len() && !lines[end + 1].trim().is_empty() {
+        while end + 1 < lines.len() && !lines[end + 1].trim().is_empty() && !fenced[end + 1] {
             end += 1;
         }
 

@@ -64,6 +64,36 @@ fn awkward_cases() {
             max_width: 10,
             want: &[(1, Rule::LineTooLong)],
         },
+        Case {
+            name: "fenced code block is exempt from every rule",
+            input: "```\nlet x = 1;\t\nstill in the fence and way past the width limit here\n```\n",
+            max_width: 20,
+            want: &[],
+        },
+        Case {
+            name: "tilde fence is recognized too",
+            input: "~~~\ntrailing space in here \n~~~\n",
+            max_width: 72,
+            want: &[],
+        },
+        Case {
+            name: "prose before and after a fence is still linted",
+            input: "trailing space here \n```\nfine in here\n```\nand trailing again \n",
+            max_width: 72,
+            want: &[(1, Rule::TrailingWhitespace), (5, Rule::TrailingWhitespace)],
+        },
+        Case {
+            name: "a fence breaks ragged-wrap paragraph grouping",
+            input: "hello world\n```\nfoo bar baz\n```\n",
+            max_width: 20,
+            want: &[],
+        },
+        Case {
+            name: "unclosed fence still exempts the rest of the file",
+            input: "```\ntrailing space forever \n",
+            max_width: 72,
+            want: &[],
+        },
     ];
 
     for c in cases {
