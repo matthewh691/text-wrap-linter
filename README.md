@@ -72,12 +72,17 @@ Lines inside a fenced code block (delimited by ``` ``` ``` or `~~~`)
 are exempt from every rule. Code isn't wrapped by hand and its width
 is whatever the code needs it to be.
 
+Email- and Markdown-style blockquote markers (`>`, `> `, `> > `, ...)
+are recognized: the marker is stripped before checking whether a line
+is blank or a single unbreakable token, so a quoted URL isn't flagged
+as too long and a `"> "` separator line breaks a quoted paragraph the
+way a blank line does. A change in quote depth between two lines also
+ends the paragraph, even without a blank line between them.
+
 ## Known limitations
 
 Line width is measured in `char`s, not display columns, so wide or
-combining Unicode characters will throw the count off. Blockquote
-prefixes (`> `) aren't recognized yet, so a quoted paragraph is linted
-as if it were prose.
+combining Unicode characters will throw the count off.
 
 ## Development
 

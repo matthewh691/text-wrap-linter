@@ -94,6 +94,36 @@ fn awkward_cases() {
             max_width: 72,
             want: &[],
         },
+        Case {
+            name: "quoted URL is a single unbreakable token despite the '> ' prefix",
+            input: "> https://example.com/a/very/long/path/that/cannot/be/split/at/all\n",
+            max_width: 40,
+            want: &[],
+        },
+        Case {
+            name: "blank blockquote line separates quoted paragraphs",
+            input: "> para one line\n> \n> para two is here\n> short\n",
+            max_width: 30,
+            want: &[(3, Rule::RaggedWrap)],
+        },
+        Case {
+            name: "ragged wrap inside a blockquote uses the word after the marker",
+            input: "> hello world\n> foo bar baz\n",
+            max_width: 22,
+            want: &[(1, Rule::RaggedWrap)],
+        },
+        Case {
+            name: "leaving a blockquote ends the paragraph like a blank line would",
+            input: "> hello world\nfoo bar baz\n",
+            max_width: 20,
+            want: &[],
+        },
+        Case {
+            name: "nested blockquote depth change ends the paragraph",
+            input: "> > hello world\n> foo bar baz\n",
+            max_width: 20,
+            want: &[],
+        },
     ];
 
     for c in cases {

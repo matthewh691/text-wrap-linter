@@ -123,6 +123,18 @@ fn check_hard_tab(line: &str, n: usize, out: &mut Vec<Finding>) {
     }
 }
 
+/// Strip a leading email/Markdown blockquote marker (`>`, `> `, `> > `, ...)
+/// so the checks below see the quoted prose, not the quote marks. Without
+/// this, `"> "` and `"> https://..."` register as containing whitespace
+/// even when the quoted content itself is blank or a single token.
+fn strip_quote_prefix(line: &str) -> &str {
+    let mut rest = line;
+    while let Some(after) = rest.strip_prefix('>') {
+        rest = after.strip_prefix(' ').unwrap_or(after);
+    }
+    rest
+}
+
 fn check_line_too_long(line: &str, n: usize, max_width: usize, out: &mut Vec<Finding>) {
     let width = line.chars().count();
     if width <= max_width {
@@ -131,7 +143,7 @@ fn check_line_too_long(line: &str, n: usize, max_width: usize, out: &mut Vec<Fin
     // A line with no whitespace is a single unbreakable token (a URL, a
     // path, a long identifier). Wrapping can't fix that, so don't ask
     // for it.
-    if !line.trim().contains(char::is_whitespace) {
+    if !strip_quote_prefix(line).trim().contains(char::is_whitespace) {
         return;
     }
     out.push(Finding {
@@ -150,27 +162,45 @@ fn check_line_too_long(line: &str, n: usize, max_width: usize, out: &mut Vec<Fin
 /// was wrapped and never re-flowed. The last line of a paragraph is
 /// exempt: it is supposed to be short.
 fn check_ragged_wraps(lines: &[&str], fenced: &[bool], max_width: usize, out: &mut Vec<Finding>) {
+    // Quote markers are prose punctuation, not prose: a blockquote's
+    // "blank separator" line is "> " with nothing after the marker, and
+    // the first "word" of a quoted line is whatever follows it, not the
+    // marker itself. Both need the marker stripped off to be judged
+    // correctly. A prefix change (entering, leaving, or changing quote
+    // depth) also ends a paragraph, the same way a blank line does.
+    let contents: Vec<&str> = lines.iter().map(|l| strip_quote_prefix(l)).collect();
+    let prefixes: Vec<&str> = lines
+        .iter()
+        .zip(contents.iter())
+        .map(|(l, c)| &l[..l.len() - c.len()])
+        .collect();
+
     let mut i = 0;
     while i < lines.len() {
-        if lines[i].trim().is_empty() || fenced[i] {
+        if contents[i].trim().is_empty() || fenced[i] {
             i += 1;
             continue;
         }
-        // Collect the run of non-blank, non-fenced lines that make up one paragraph.
+        // Collect the run of non-blank, non-fenced, same-quote-depth lines
+        // that make up one paragraph.
         let start = i;
         let mut end = i;
-        while end + 1 < lines.len() && !lines[end + 1].trim().is_empty() && !fenced[end + 1] {
+        while end + 1 < lines.len()
+            && !contents[end + 1].trim().is_empty()
+            && !fenced[end + 1]
+            && prefixes[end + 1] == prefixes[start]
+        {
             end += 1;
         }
 
         for j in start..end {
             let line = lines[j];
-            let single_token = !line.trim().contains(char::is_whitespace);
+            let single_token = !contents[j].trim().contains(char::is_whitespace);
             if single_token {
                 continue;
             }
             let width = line.chars().count();
-            let next_word = lines[j + 1].split_whitespace().next().unwrap_or("");
+            let next_word = contents[j + 1].split_whitespace().next().unwrap_or("");
             if next_word.is_empty() {
                 continue;
             }
