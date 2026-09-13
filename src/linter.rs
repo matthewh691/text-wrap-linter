@@ -4,6 +4,8 @@
 
 use std::fmt;
 
+use crate::width::display_width;
+
 /// A single rule violation, tied to a 1-indexed line number.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Finding {
@@ -136,7 +138,7 @@ fn strip_quote_prefix(line: &str) -> &str {
 }
 
 fn check_line_too_long(line: &str, n: usize, max_width: usize, out: &mut Vec<Finding>) {
-    let width = line.chars().count();
+    let width = display_width(line);
     if width <= max_width {
         return;
     }
@@ -150,7 +152,7 @@ fn check_line_too_long(line: &str, n: usize, max_width: usize, out: &mut Vec<Fin
         line: n,
         rule: Rule::LineTooLong,
         message: format!(
-            "line is {} characters wide, over the {} limit",
+            "line is {} columns wide, over the {} limit",
             width, max_width
         ),
     });
@@ -199,17 +201,17 @@ fn check_ragged_wraps(lines: &[&str], fenced: &[bool], max_width: usize, out: &m
             if single_token {
                 continue;
             }
-            let width = line.chars().count();
+            let width = display_width(line);
             let next_word = contents[j + 1].split_whitespace().next().unwrap_or("");
             if next_word.is_empty() {
                 continue;
             }
-            if width + 1 + next_word.chars().count() <= max_width {
+            if width + 1 + display_width(next_word) <= max_width {
                 out.push(Finding {
                     line: j + 1,
                     rule: Rule::RaggedWrap,
                     message: format!(
-                        "line wraps at {} characters though the next word ('{}') would fit within the {} limit",
+                        "line wraps at {} columns though the next word ('{}') would fit within the {} limit",
                         width, next_word, max_width
                     ),
                 });

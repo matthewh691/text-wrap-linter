@@ -81,8 +81,12 @@ ends the paragraph, even without a blank line between them.
 
 ## Known limitations
 
-Line width is measured in `char`s, not display columns, so wide or
-combining Unicode characters will throw the count off.
+Line width is measured in terminal columns, not `char`s: combining
+marks count as zero width and CJK/Hangul/fullwidth characters count as
+two, using a hardcoded set of Unicode ranges rather than the full East
+Asian Width tables. Scripts outside those ranges count as one column
+each, which is right for Latin, Greek, and Cyrillic text but can be off
+for less common wide or zero-width characters.
 
 ## Development
 
