@@ -55,6 +55,18 @@ what you want in a `commit-msg` hook:
 
 Findings from stdin are reported under the path `-`.
 
+Pass `--json` to get findings as a single JSON array on stdout instead
+of one line per finding, for feeding into another tool:
+
+```
+./target/release/wraplint --json CHANGELOG.txt
+[{"path":"CHANGELOG.txt","line":2,"rule":"ragged-wrap","message":"line wraps at 43 columns though the next word ('long.') would fit within the 72 limit"}]
+```
+
+The array covers every file passed on the command line, in the order
+findings were produced; file read errors still go to stderr as plain
+text either way.
+
 ## Rules
 
 - `line-too-long` — a line is wider than the configured limit. A line

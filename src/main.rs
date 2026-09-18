@@ -3,12 +3,14 @@ use std::fs;
 use std::io::{self, Read};
 use std::process::ExitCode;
 
-use wraplint::linter::{lint, Options};
+use wraplint::json::findings_to_json;
+use wraplint::linter::{lint, Finding, Options};
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().skip(1).collect();
 
     let mut max_width = 72;
+    let mut json = false;
     let mut paths = Vec::new();
     let mut i = 0;
     while i < args.len() {
@@ -23,6 +25,7 @@ fn main() -> ExitCode {
                     }
                 }
             }
+            "--json" => json = true,
             "-h" | "--help" => {
                 print_usage();
                 return ExitCode::SUCCESS;
@@ -39,6 +42,9 @@ fn main() -> ExitCode {
 
     let opts = Options { max_width };
     let mut found_any = false;
+    // Findings from every file, kept around so JSON mode can emit one
+    // array at the end instead of a line per file.
+    let mut all_findings: Vec<(String, Finding)> = Vec::new();
 
     for path in &paths {
         let text = if path == "-" {
@@ -62,9 +68,21 @@ fn main() -> ExitCode {
             }
         };
         for finding in lint(&text, &opts) {
-            println!("{}:{}", path, finding);
             found_any = true;
+            if json {
+                all_findings.push((path.clone(), finding));
+            } else {
+                println!("{}:{}", path, finding);
+            }
         }
+    }
+
+    if json {
+        let items: Vec<(&str, &Finding)> = all_findings
+            .iter()
+            .map(|(path, finding)| (path.as_str(), finding))
+            .collect();
+        println!("{}", findings_to_json(&items));
     }
 
     if found_any {
@@ -75,6 +93,6 @@ fn main() -> ExitCode {
 }
 
 fn print_usage() {
-    eprintln!("usage: wraplint [--width N] FILE...");
-    eprintln!("       wraplint [--width N] -   (read from stdin)");
+    eprintln!("usage: wraplint [--width N] [--json] FILE...");
+    eprintln!("       wraplint [--width N] [--json] -   (read from stdin)");
 }
